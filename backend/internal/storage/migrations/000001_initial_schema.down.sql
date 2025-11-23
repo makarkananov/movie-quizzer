@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS user_achievements;
+DROP TABLE IF EXISTS achievements;
+DROP TABLE IF EXISTS answers;
+DROP TABLE IF EXISTS session_questions;
+DROP TABLE IF EXISTS questions;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;

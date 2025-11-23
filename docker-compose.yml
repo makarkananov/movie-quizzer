@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: quiz-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: quiz
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: quiz-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9090"
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - minio_data:/data
+
+  create-bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc config host add myminio http://minio:9000 minio minio123;
+      mc mb -p myminio/media || true;
+      "
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quiz-backend
+    depends_on:
+      - postgres
+      - minio
+      - create-bucket
+    environment:
+      HTTP_ADDR: ":8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: app
+      DB_PASSWORD: app
+      DB_NAME: quiz
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY: "minio"
+      MINIO_SECRET_KEY: "minio123"
+      MINIO_BUCKET: "media"
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  minio_data:
