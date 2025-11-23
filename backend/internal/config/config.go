@@ -14,6 +14,7 @@ type Config struct {
 	MinioAccessKey string `env:"MINIO_ACCESS_KEY" env-default:"minio"`
 	MinioSecretKey string `env:"MINIO_SECRET_KEY" env-default:"minio123"`
 	MinioBucket    string `env:"MINIO_BUCKET"    env-default:"media"`
+	MinioUseSSL     bool   `env:"MINIO_USE_SSL"   env-default:"false"`
 }
 
 func Load() Config {

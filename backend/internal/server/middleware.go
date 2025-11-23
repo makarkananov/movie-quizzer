@@ -16,7 +16,7 @@ func (s *Server) auth(next func(w http.ResponseWriter, r *http.Request, user ser
 		}
 
 		parts := strings.SplitN(h, " ", 2)
-		if len(parts) != 2 {
+		if len(parts) != 2 || parts[0] != "Bearer" {
 			Error(w, "unauthorized", "invalid Authorization", http.StatusUnauthorized)
 			return
 		}

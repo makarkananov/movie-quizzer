@@ -1,0 +1,68 @@
+services:
+  # Backend API Service
+  - type: web
+    name: movie-quizzer-backend
+    env: go
+    region: frankfurt
+    plan: starter
+    buildCommand: cd backend && go build -o server ./cmd
+    startCommand: ./backend/server
+    envVars:
+      - key: HTTP_ADDR
+        value: :10000
+      - key: DB_HOST
+        fromDatabase:
+          name: movie-quizzer-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: movie-quizzer-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: movie-quizzer-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: movie-quizzer-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: movie-quizzer-db
+          property: database
+      - key: MINIO_ENDPOINT
+        sync: false
+        value: s3.amazonaws.com  # Или другой S3-совместимый endpoint
+      - key: MINIO_ACCESS_KEY
+        sync: false
+        value: your-access-key  # Замените на ваш AWS Access Key
+      - key: MINIO_SECRET_KEY
+        sync: false
+        value: your-secret-key  # Замените на ваш AWS Secret Key
+      - key: MINIO_BUCKET
+        value: movie-quizzer-media
+      - key: AWS_REGION
+        sync: false
+        value: us-east-1  # Замените на ваш регион
+
+  # Frontend Service
+  - type: web
+    name: movie-quizzer-frontend
+    env: node
+    region: frankfurt
+    plan: starter
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: npx serve -s dist -l 10000
+    envVars:
+      - key: VITE_API_URL
+        value: https://movie-quizzer-backend.onrender.com
+      - key: NODE_ENV
+        value: production
+
+  # PostgreSQL Database
+  - type: pspg
+    name: movie-quizzer-db
+    plan: starter
+    databaseName: quiz
+    user: app
+

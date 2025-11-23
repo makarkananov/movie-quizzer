@@ -36,7 +36,7 @@ func (s SQL) GetGlobalLeaderboard(limit int) ([]service.LeaderboardEntry, error)
 		    COALESCE(SUM(a.score_delta), 0) AS score,
 		    CASE
 		        WHEN COUNT(a.id) = 0 THEN 0
-		        ELSE COUNT(a.id FILTER (WHERE a.correct = TRUE))::float / COUNT(a.id) * 100
+		        ELSE SUM(CASE WHEN a.correct = TRUE THEN 1 ELSE 0 END)::float / COUNT(a.id) * 100
 		    END AS accuracy
 		FROM users u
 		LEFT JOIN sessions s ON s.user_id = u.id
@@ -78,7 +78,7 @@ func (s SQL) GetLeaderboardEntry(userID int64) (service.LeaderboardEntry, error)
 				COALESCE(SUM(a.score_delta), 0) AS score,
 				CASE
 					WHEN COUNT(a.id) = 0 THEN 0
-					ELSE COUNT(a.id FILTER (WHERE a.correct = TRUE))::float / COUNT(a.id) * 100
+					ELSE SUM(CASE WHEN a.correct = TRUE THEN 1 ELSE 0 END)::float / COUNT(a.id) * 100
 				END AS accuracy
 			FROM users u
 			LEFT JOIN sessions s ON s.user_id = u.id

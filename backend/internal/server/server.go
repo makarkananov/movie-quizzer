@@ -38,8 +38,20 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("GET /api/leaderboard/global", s.globalLeaderboard)
 	mux.HandleFunc("GET /api/leaderboard/me", s.auth(s.myLeaderboard))
 
-	// media
-	mux.HandleFunc("GET /api/media/{bucket}/{file}", s.media)
+	// media - используем wildcard для поддержки путей с подпапками (frames/..., videos/...)
+	mux.HandleFunc("GET /api/media/{file...}", s.media)
 
-	return mux
+	// CORS middleware
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		mux.ServeHTTP(w, r)
+	})
 }

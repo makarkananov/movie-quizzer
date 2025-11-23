@@ -3,14 +3,21 @@ package storage
 import (
 	"fmt"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"movie-quizzer/backend/internal/service"
 )
 
 func (s SQL) CreateUser(email, password, nickname string) error {
-	_, err := s.db.Exec(`
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	_, err = s.db.Exec(`
 		INSERT INTO users (email, password_hash, nickname)
 		VALUES ($1, $2, $3)
-	`, email, password, nickname)
+	`, email, string(hash), nickname)
 	return err
 }
 
@@ -22,10 +29,11 @@ func (s SQL) LoginUser(email, password string) (string, error) {
 		SELECT id, password_hash FROM users WHERE email = $1
 	`, email).Scan(&id, &hash)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("user not found")
 	}
 
-	if hash != password {
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
 		return "", fmt.Errorf("wrong_credentials")
 	}
 
