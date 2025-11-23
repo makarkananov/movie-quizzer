@@ -16,20 +16,20 @@ func shuffleOptions(options []string) []string {
 	if len(options) <= 1 {
 		return options
 	}
-	
+
 	shuffled := make([]string, len(options))
 	copy(shuffled, options)
-	
+
 	// Используем текущее время + дополнительную случайность для seed
 	seed := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(seed))
-	
+
 	// Fisher-Yates shuffle - гарантирует равномерное распределение
 	for i := len(shuffled) - 1; i > 0; i-- {
 		j := r.Intn(i + 1)
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	}
-	
+
 	return shuffled
 }
 
@@ -80,6 +80,7 @@ func (s SQL) StartSession(userID int64, mode string) (service.Session, service.Q
 	defer rows.Close()
 
 	var questions []service.Question
+	seenIDs := make(map[int64]bool) // Отслеживаем уже добавленные вопросы
 	position := 1
 	for rows.Next() {
 		var q service.Question
@@ -89,7 +90,13 @@ func (s SQL) StartSession(userID int64, mode string) (service.Session, service.Q
 		if err != nil {
 			return sess, service.Question{}, err
 		}
-		
+
+		// Пропускаем дубликаты (на всякий случай)
+		if seenIDs[q.ID] {
+			continue
+		}
+		seenIDs[q.ID] = true
+
 		// Перемешиваем варианты ответов ПЕРЕД сохранением в массив
 		// Это гарантирует, что правильный ответ не всегда будет на одном месте
 		q.Options = shuffleOptions(q.Options)
@@ -241,11 +248,21 @@ func (s SQL) awardAchievement(userID int64, achievementCode string) {
 
 // checkSessionAchievements проверяет и присваивает достижения после завершения сессии
 func (s SQL) checkSessionAchievements(userID, sessionID int64) {
-	// 1. Первая игра - проверяем, есть ли у пользователя другие завершенные сессии
-	var otherSessions int
+	// Проверяем, что сессия завершена с 10 вопросами
+	var sessionTotalQuestions int
 	err := s.db.QueryRow(`
+		SELECT total_questions FROM sessions WHERE id = $1 AND status = 'finished'
+	`, sessionID).Scan(&sessionTotalQuestions)
+	if err != nil || sessionTotalQuestions != 10 {
+		// Сессия не завершена или не имеет 10 вопросов - не засчитываем достижения
+		return
+	}
+
+	// 1. Первая игра - проверяем, есть ли у пользователя другие завершенные сессии с 10 вопросами
+	var otherSessions int
+	err = s.db.QueryRow(`
 		SELECT COUNT(*) FROM sessions 
-		WHERE user_id = $1 AND status = 'finished' AND id != $2
+		WHERE user_id = $1 AND status = 'finished' AND total_questions = 10 AND id != $2
 	`, userID, sessionID).Scan(&otherSessions)
 	if err == nil && otherSessions == 0 {
 		s.awardAchievement(userID, "first_game")
@@ -271,11 +288,11 @@ func (s SQL) checkSessionAchievements(userID, sessionID int64) {
 		s.awardAchievement(userID, "century")
 	}
 
-	// 4. Ветеран - сыграно 10+ раундов
+	// 4. Ветеран - сыграно 10+ раундов с 10 вопросами
 	var totalSessions int
 	err = s.db.QueryRow(`
 		SELECT COUNT(*) FROM sessions 
-		WHERE user_id = $1 AND status = 'finished'
+		WHERE user_id = $1 AND status = 'finished' AND total_questions = 10
 	`, userID).Scan(&totalSessions)
 	if err == nil && totalSessions >= 10 {
 		s.awardAchievement(userID, "veteran")

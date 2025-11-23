@@ -7,10 +7,10 @@ func (s SQL) GetProfile(userID int64) (service.Profile, error) {
 
 	err := s.db.QueryRow(`
 		SELECT
-			(SELECT COUNT(*) FROM sessions WHERE user_id = $1) AS total_sessions,
-			(SELECT COUNT(*) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1)) AS total_answers,
-			(SELECT COUNT(*) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1) AND correct = TRUE) AS correct_answers,
-			(SELECT COALESCE(SUM(score_delta),0) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1)) AS total_score
+			(SELECT COUNT(*) FROM sessions WHERE user_id = $1 AND status = 'finished' AND total_questions = 10) AS total_sessions,
+			(SELECT COUNT(*) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1 AND status = 'finished' AND total_questions = 10)) AS total_answers,
+			(SELECT COUNT(*) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1 AND status = 'finished' AND total_questions = 10) AND correct = TRUE) AS correct_answers,
+			(SELECT COALESCE(SUM(score_delta),0) FROM answers WHERE session_id IN (SELECT id FROM sessions WHERE user_id = $1 AND status = 'finished' AND total_questions = 10)) AS total_score
 	`, userID).Scan(
 		&p.TotalSessions,
 		&p.TotalAnswers,

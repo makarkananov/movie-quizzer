@@ -39,7 +39,7 @@ func (s SQL) GetGlobalLeaderboard(limit int) ([]service.LeaderboardEntry, error)
 		        ELSE SUM(CASE WHEN a.correct = TRUE THEN 1 ELSE 0 END)::float / COUNT(a.id) * 100
 		    END AS accuracy
 		FROM users u
-		LEFT JOIN sessions s ON s.user_id = u.id
+		LEFT JOIN sessions s ON s.user_id = u.id AND s.status = 'finished' AND s.total_questions = 10
 		LEFT JOIN answers a ON a.session_id = s.id
 		GROUP BY u.id, u.nickname
 		ORDER BY score DESC
@@ -81,7 +81,7 @@ func (s SQL) GetLeaderboardEntry(userID int64) (service.LeaderboardEntry, error)
 					ELSE SUM(CASE WHEN a.correct = TRUE THEN 1 ELSE 0 END)::float / COUNT(a.id) * 100
 				END AS accuracy
 			FROM users u
-			LEFT JOIN sessions s ON s.user_id = u.id
+			LEFT JOIN sessions s ON s.user_id = u.id AND s.status = 'finished' AND s.total_questions = 10
 			LEFT JOIN answers a ON a.session_id = s.id
 			GROUP BY u.id, u.nickname
 		),
